@@ -2,11 +2,14 @@
 @lazyglobal off.
 
 parameter
-    orbitDir.      // N=0, E=90, S=180, W=270
+    orbDir is 90.      // N=0, E=90, S=180, W=270
 
 
 global scriptName is "ORBITER".
-global trgAlt is 80000.
+global debug is true.
+
+local orbAlt is 80000.
+local pitchAlt is 35000.
 
 
 // SETUP //
@@ -80,43 +83,65 @@ until false
         set dvData["eff"] to dvData["gain"] / dvData["consumed"].
         
         // show vector arrows
-        DrawVec().
+	if debug { DrawVec(). }
     }
 
     // store current time and velocity for the next time step
     set prevVel to ship:velocity:surface.
     set prevT to time:seconds.
-
-
     
-    KUIDataA1("DV CONSUMED: " + round(dvData["consumed"],2)).
-    KUIDataA2("DV EFF: " + round((100*dvData["eff"]),2) + "%").
-    KUIDataB1("DV GAIN: " + round(dvData["gain"],2)).
-    KUIDataB2("DV LOSS: " + round(dvData["loss"],2)).
-
-    lock steering to heading(orbitDir, max(90-90*(altitude/35000), 0).
-}
-
-KUIKonsole("EXECUTING GRAVITY TURN").       // gravity turn
-until altitude >= 10000 {
-    local trgPitch is 90 - 45 * (altitude / 10000).         // target pitch at altitude
-
-    // if AoA() <= 5 {
-    //     lock steering to heading(orbitDir, trgPitch).
-    // } else {
-    //     lock steering to heading(orbitDir, ProgradePitch()-5).
-    // }
-    lock steering to heading(orbitDir, trgPitch).
-
-    KUIDataA1("HEADING: " + round(orbitDir,1) + "°").
+    
+    // run modes
+    if altitude < pitchAlt
+    {
+    set steering to heading(orbDir, 90 - 90 * (altitude/pitchAlt).
+    
+    
+    KUIKonsole("ASCENDING").
+    KUIDataA1("HEADING: " + orbitDir + "°").
+      
     KUIDataB1("PITCH: " + round(Pitch(),2) + "°").
     KUIDataB2("TRG PITCH: " + round(trgPitch,2) + "°").
+    
     KUIDataC1("PROGRADE: " + round(ProgradePitch(),2) + "°").
     KUIDataC2("AOA: " + round(AoA(),2) + "°").
+    
+    KUIDataD1(DV CONSUMED: " + round(dvData["consumed"],2)).
+    KUIDataD2("DV EFF: " + round((100*dvData["eff"]),2) + "%").
+    
+    KUIDataE1("DV GAIN: " + round(dvData["gain"],2)).
+    KUIDataE2("DV LOSS: " + round(dvData["loss"],2)).
+
+    }
+    
+    if altitude >= pitchAlt and ship:apoapsis < orbAlt 
+    {
+    set steering to heading(orbDir, 5). 		// needs PID
+    
+    KUIKonsole("BURNING TO APOAPSIS").
+    }
+    
+    if ship:apoapsis >= orbAlt
+    {
+    KUIKonsole("CUTTING ENGINES").
+    set throttle to 0.
+    lock steering to prograde.
+    wait until vang(ship:facing:vector, ship:prograde:vector) < 0.25.
+
+    until altitude >= body:atm:height {
+    set kuniverse:timewarp:rate to 4.
+    KUIKonsole("WARPING").}
+    set kuniverse:timewarp:rate to 1.
+    wait until kuniverse:timewarp:issettled.
+    KUIKonsole("LEAVING ATMOSPHERE").
+    wait 3.
+    }
+    
+    
 }
 
+
 KUIRefreshData().
-KUIKonsole("BURNING TO APOAPSIS").
 
 until ship:apoapsis >= 80000 {
 
@@ -148,20 +173,6 @@ until ship:apoapsis >= 80000 {
 
     KUIDataG1("PID CORRECTION: " + round(pitchPID:output,2)).
 }
-
-KUIKonsole("CUTTING ENGINES").
-lock throttle to 0.
-lock steering to prograde.
-wait until vang(ship:facing:vector, ship:prograde:vector) < 0.25.
-
-until altitude >= body:atm:height {
-    set kuniverse:timewarp:rate to 4.
-    KUIKonsole("WARPING").
-}
-set kuniverse:timewarp:rate to 1.
-wait until kuniverse:timewarp:issettled.
-KUIKonsole("LEAVING ATMOSPHERE").
-wait 3.
 
 
 // ORBITAL INSERTION //
