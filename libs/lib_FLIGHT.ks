@@ -198,3 +198,9 @@ function VisViva        // returns orbital velocity at any point in orbit
 
     return vo.
 }
+
+function ShipMass       // returns vessel mass in kg
+{
+    local masskg is ship:mass*1000.
+    return masskg.
+}

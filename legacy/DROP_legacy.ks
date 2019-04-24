@@ -1,0 +1,72 @@
+// ICARUS DROP SCRIPT
+@LAZYGLOBAL OFF.
+PARAMETER trgAlt.
+
+SET shipHeight to 9.9.
+SET trgTWR to 1.25.
+
+CLEARSCREEN.
+SET TERMINAL:WIDTH TO 50.
+SET TERMINAL:HEIGHT TO 36.
+SET TERMINAL:BRIGHTNESS TO 1.0.
+SET TERMINAL:CHARHEIGHT TO 12.
+SET TERMINAL:REVERSE TO FALSE.
+SET TERMINAL:VISUALBEEP TO FALSE.
+
+PRINT "RUNNING DROP TEST...".
+
+SAS OFF.
+RCS OFF.
+GEAR ON.
+LOCK THROTTLE TO 0.
+LOCK STEERING TO UP + R(0,0,180).
+SET initAlt TO ALTITUDE - shipHeight.
+STAGE.
+
+LOCK trgThrot TO (trgTWR * SHIP:MASS * 9.802) / SHIP:AVAILABLETHRUST. // *
+LOCK THROTTLE TO trgThrot.
+LOCK offsetAlt to ALTITUDE - shipHeight.
+LOCK radarAlt to offsetAlt - initAlt.
+LOCK radarAp TO APOAPSIS - 77.4.    // *
+
+UNTIL radarAp >= trgAlt {
+    Display().
+}
+
+PRINT "COASTING" AT(1,4).
+LOCK THROTTLE TO 0.
+
+UNTIL radarAlt >= trgAlt {
+    Display().
+}
+
+PRINT "RELEASING CONTROLS" AT(1,4).
+SET SHIP:CONTROL:PILOTMAINTHROTTLE TO 0.
+UNLOCK THROTTLE.
+
+WAIT UNTIL radarAlt < trgAlt.
+
+SET dropTime to TIME:SECONDS.
+
+UNTIL radarAlt <= 0 {
+    Display().
+    LogData().
+}
+
+CLEARSCREEN.
+PRINT "TEST COMPLETE".
+WAIT 1.
+
+// USER-FUNCTIONS
+
+FUNCTION Display {
+    PRINT "ALTITUDE: " + ROUND(radarAlt) + "m" AT(1,1).
+    PRINT "APOAPSIS: " + ROUND(radarAp) + "m" AT(1,2).
+}
+
+FUNCTION LogData {    
+    IF TIME:SECONDS - lastLog > logFreq {
+        LOG (TIME:SECONDS - dropTime) + "," + radarAlt + "," + (SHIP:CONTROL:PILOTMAINTHROTTLE * 100) TO "droptest.csv".
+        SET lastLog TO TIME:SECONDS.
+    }    
+}

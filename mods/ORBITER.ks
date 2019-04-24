@@ -36,9 +36,7 @@ wait 1.
 Staging().
 
 
-local prevT is time:seconds.
 
-local prevVel is ship:velocity:orbit.
 
 local dVData is lexicon().
 dvData:add("consumed",0).
@@ -46,30 +44,64 @@ dvData:add("gain",0).
 dvData:add("loss",0).
 dvData:add("eff",0).
 
+local forces is lexicon().      // expressed as vectors
+forces:add("Fg",0).
+forces:add("Ft",v(0,0,0)).
+forces:add("Fd",0).
+forces:add("Fnet",0).
+forces:add("netAcc",v(0,0,0)).
+forces:add("FgArrow",0).        // visualized vectors
+forces:add("FtArrow",0).
+forces:add("FdArrow",0).
+forces:add("FnetArrow",0).
+
+
+
+// local vec is lexicon().
+// vec:add("gAcc",0).
+// vec:add("thrustAcc",0).
+// vec:add("dragAcc",0).
+// vec:add("netAcc",0).
+
+local prevT is time:seconds.
+local prevVel is ship:velocity:surface.
 
 until false
 {
-    // sample time
+    // sample elapsed time
     local dT is time:seconds - prevT.
-
-    local gravAcc is body:mu / (ship:body:radius+ship:altitude)^2.
-    local netAcc is 0.
     if dT <> 0
     {
-        // derive the acceleration from the change of velocity over time,
-        // add in the gravitational acceleration
-        set netAcc to (ship:velocity:orbit - prevVel)*(1/dt) + (ship:up:vector*gravAcc).      // vector addition. Does not take into account drag acc (?)
+        // calculate force vectors
+        set forces["Fg"] to -1*up:vector * (body:mu * ShipMass() / (ship:altitude+body:radius)^2).        // Fg = GMm/r^2
 
-        set dvData["consumed"] to dvData["consumed"] + throttle*(ship:availablethrust/ship:mass) *dt.      // dv from area under acceleration-time
-        set dvData["gain"] to dvData["gain"] + vdot(ship:velocity:orbit:normalized, netAcc).        // velocity inputted directly into orbit (?) 
-        set dvData["loss"] to dvData["consumed"] - dvData["gain"].
-        set dvData["eff"] to dvData["gain"] / dvData["consumed"].
+        local engs is 0.
+        set forces["Ft"] to v(0,0,0).       // reset thrust force 
+        list engines in engs.
+        for eng in engs {
+            set forces["Ft"] to forces["Ft"] + (ship:facing:vector * eng:thrust*1000).
+        }
+
+        // set forces["netAcc"] to (ship:velocity:surface - prevVel) / dt.         // derive net acc from change of velocity over time
+        set forces["netAcc"] to (forces["netAcc"] + ((ship:velocity:surface-prevVel)/dt))/2.
+        set forces["Fnet"] to ShipMass() * forces["netAcc"].         // F = ma 
+        set forces["Fd"] to forces["Fnet"] - forces["Ft"] - forces["Fg"].
+
+        // add in the gravitational acceleration
+        // set netAcc to (ship:velocity:orbit - prevVel)*(1/dt) + (ship:up:vector*gravAcc).      // vector addition. Does not take into account drag acc (?)
+
+        // set dvData["consumed"] to dvData["consumed"] + throttle*(ship:availablethrust/ship:mass) *dt.      // dv from area under acceleration-time
+        // set dvData["gain"] to dvData["gain"] + vdot(ship:velocity:orbit:normalized, netAcc).        // velocity inputted directly into orbit (?) 
+        // set dvData["loss"] to dvData["consumed"] - dvData["gain"].
+        // set dvData["eff"] to dvData["gain"] / dvData["consumed"].
+        
+
+        // show vector arrows
+        DrawVec().
     }
 
-
-
     // store current time and velocity for the next time step
-    set prevVel to ship:velocity:orbit.
+    set prevVel to ship:velocity:surface.
     set prevT to time:seconds.
 
 
@@ -78,8 +110,11 @@ until false
     KUIDataA2("DV EFF: " + round((100*dvData["eff"]),2) + "%").
     KUIDataB1("DV GAIN: " + round(dvData["gain"],2)).
     KUIDataB2("DV LOSS: " + round(dvData["loss"],2)).
-    KUIDataC1("gravAcc: "+ round(gravAcc,2)).
-    KUIDataC2("netAcc: " + netAcc:meg).
+
+    KUIDataC2("Orbit vel: " + ship:velocity:orbit:mag).
+    KUIDataD1("surface vel: " + ship:velocity:surface:mag).
+
+    lock steering to heading(orbitDir, 90 - 45 * (altitude / 10000)).
 }
 
 
@@ -213,6 +248,16 @@ function LibSetup
         print lib + " successfully added!".
         wait 0.1.
     }
+}
+
+function DrawVec
+{
+    clearvecdraws().
+
+    vecdraw(v(0,0,0), forces["Fg"]*0.00001, purple, "Fg "+(round(forces["Fg"]:mag/1000))+"kN", 5.0, true, 0.1).
+    vecdraw(v(0,0,0), forces["Ft"]*0.00001, green, "Ft "+(round(forces["Ft"]:mag/1000))+"kN", 5.0, true, 0.1).
+    vecdraw(v(0,0,0), forces["Fd"]*0.00001, red, "Fd "+(round(forces["Fd"]:mag/1000))+"kN", 5.0, true, 0.1).
+    vecdraw(v(0,0,0), forces["Fnet"]*0.00001, blue, "Fnet "+(round(forces["Fnet"]:mag/1000))+"kN", 5.0, true, 0.1).
 }
 
 
