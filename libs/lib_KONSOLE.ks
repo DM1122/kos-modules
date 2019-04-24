@@ -36,17 +36,6 @@ function KUISetup
     print scriptName at(1,1).
 }
 
-
-function KUIKonsole
-{
-    parameter
-        string.
-    
-    KUIclearKonsole().
-    print string at(10,18).
-}
-
-
 function KUIRefreshData
 {
     print "|===========================================|" at(0,2).
@@ -68,24 +57,19 @@ function KUIRefreshData
 }
 
 
+function KUIKonsole
+{
+    parameter
+        string.
+    
+    KUIclearKonsole().
+    print string at(10,18).
+}
+
+
 function KUIclearKonsole
 {
     print "|KONSOLE>                                   |" at(0,18).
-}
-
-
-function KUIclearln
-{
-    parameter
-        line.
-    print "|                                           |" at(0, line).
-}
-
-
-function quit
-{
-    KUIKonsole("PRESS CONTROL-C TO QUIT").
-    wait until false.
 }
 
 
@@ -160,6 +144,7 @@ function KUIDataD2
     print data at(23,10).
 }
 
+
 function KUIDataE1
 {
     parameter
@@ -176,6 +161,7 @@ function KUIDataE2
     
     print data at(23,12).
 }
+
 
 function KUIDataF1
 {
@@ -194,6 +180,7 @@ function KUIDataF2
     print data at(23,14).
 }
 
+
 function KUIDataG1
 {
     parameter
@@ -209,4 +196,11 @@ function KUIDataG2
         data.
     
     print data at(23,16).
+}
+
+
+function quit
+{
+    KUIKonsole("PRESS CONTROL-C TO QUIT").
+    wait until false.
 }
