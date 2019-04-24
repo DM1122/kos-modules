@@ -6,6 +6,7 @@ parameter
 
 
 global scriptName is "ORBITER".
+global trgAlt is 80000.
 
 
 // SETUP //
@@ -21,7 +22,7 @@ FlightSetup().
 
 FROM {local i is 3.} UNTIL i = 0 STEP {set i to i-1.} DO {      // launch countdown
   KUIKonsole("LAUNCHING IN " + i).
-  wait 1.
+  wait 0.5.
 }
 
 KUIKonsole("LAUNCHING").
@@ -35,9 +36,6 @@ wait 1.
 // ASCENT //
 Staging().
 
-
-
-
 local dVData is lexicon().
 dvData:add("consumed",0).
 dvData:add("gain",0).
@@ -45,23 +43,11 @@ dvData:add("loss",0).
 dvData:add("eff",0).
 
 local forces is lexicon().      // expressed as vectors
-forces:add("Fg",0).
+forces:add("Fg",v(0,0,0)).
 forces:add("Ft",v(0,0,0)).
-forces:add("Fd",0).
-forces:add("Fnet",0).
+forces:add("Fd",v(0,0,0)).
+forces:add("Fnet",v(0,0,0)).
 forces:add("netAcc",v(0,0,0)).
-forces:add("FgArrow",0).        // visualized vectors
-forces:add("FtArrow",0).
-forces:add("FdArrow",0).
-forces:add("FnetArrow",0).
-
-
-
-// local vec is lexicon().
-// vec:add("gAcc",0).
-// vec:add("thrustAcc",0).
-// vec:add("dragAcc",0).
-// vec:add("netAcc",0).
 
 local prevT is time:seconds.
 local prevVel is ship:velocity:surface.
@@ -72,7 +58,7 @@ until false
     local dT is time:seconds - prevT.
     if dT <> 0
     {
-        // calculate force vectors
+        // update force vectors
         set forces["Fg"] to -1*up:vector * (body:mu * ShipMass() / (ship:altitude+body:radius)^2).        // Fg = GMm/r^2
 
         local engs is 0.
@@ -83,19 +69,16 @@ until false
         }
 
         // set forces["netAcc"] to (ship:velocity:surface - prevVel) / dt.         // derive net acc from change of velocity over time
-        set forces["netAcc"] to (forces["netAcc"] + ((ship:velocity:surface-prevVel)/dt))/2.
+        set forces["netAcc"] to (forces["netAcc"] + ((ship:velocity:surface-prevVel)/dt))/2. 		// averaged to reduce noise
         set forces["Fnet"] to ShipMass() * forces["netAcc"].         // F = ma 
         set forces["Fd"] to forces["Fnet"] - forces["Ft"] - forces["Fg"].
 
-        // add in the gravitational acceleration
-        // set netAcc to (ship:velocity:orbit - prevVel)*(1/dt) + (ship:up:vector*gravAcc).      // vector addition. Does not take into account drag acc (?)
-
-        // set dvData["consumed"] to dvData["consumed"] + throttle*(ship:availablethrust/ship:mass) *dt.      // dv from area under acceleration-time
-        // set dvData["gain"] to dvData["gain"] + vdot(ship:velocity:orbit:normalized, netAcc).        // velocity inputted directly into orbit (?) 
-        // set dvData["loss"] to dvData["consumed"] - dvData["gain"].
-        // set dvData["eff"] to dvData["gain"] / dvData["consumed"].
+	// update dv data
+        set dvData["consumed"] to dvData["consumed"] +  forces["Ft"]/ShipMass() * dt.      // dv from area under acceleration-time
+        set dvData["gain"] to dvData["gain"] + vdot(ship:velocity:orbit:normalized, forces["netAcc"]).        // velocity inputted directly into orbit (?) 
+        set dvData["loss"] to dvData["consumed"] - dvData["gain"].
+        set dvData["eff"] to dvData["gain"] / dvData["consumed"].
         
-
         // show vector arrows
         DrawVec().
     }
@@ -111,13 +94,8 @@ until false
     KUIDataB1("DV GAIN: " + round(dvData["gain"],2)).
     KUIDataB2("DV LOSS: " + round(dvData["loss"],2)).
 
-    KUIDataC2("Orbit vel: " + ship:velocity:orbit:mag).
-    KUIDataD1("surface vel: " + ship:velocity:surface:mag).
-
-    lock steering to heading(orbitDir, 90 - 45 * (altitude / 10000)).
+    lock steering to heading(orbitDir, max(90-90*(altitude/35000), 0).
 }
-
-
 
 KUIKonsole("EXECUTING GRAVITY TURN").       // gravity turn
 until altitude >= 10000 {
