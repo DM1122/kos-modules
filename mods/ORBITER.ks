@@ -23,7 +23,7 @@ wait 3.
 // LAUNCH //
 FlightSetup().
 
-FROM {local i is 3.} UNTIL i = 0 STEP {set i to i-1.} DO {      // launch countdown
+from {local i is 3.} until i = 0 step {set i to i-1.} do {      // launch countdown
   KUIKonsole("LAUNCHING IN " + i).
   wait 0.5.
 }
@@ -52,7 +52,6 @@ forces:add("Fnet",v(0,0,0)).
 forces:add("netAcc",v(0,0,0)).
 
 
-
 // Ascent
 local prevT is time:seconds.
 local prevVel is ship:velocity:surface.
@@ -65,9 +64,8 @@ until ship:altitude > pitchAlt
     
     KUIKonsole("ASCENDING").
     UpdateUIAscent().
-
 }
-
+KUIRefreshData().
 
 // Burn to Apoapsis
 local pitchPID is pidloop(1.5, 0.25, 0.5, 0, 90).         // kP, kI, kD, min, max
@@ -80,8 +78,8 @@ until ship:apoapsis >= orbAlt
     
     KUIKonsole("BURNING TO APOAPSIS").
     UpdateUIPID().
-    
 }
+KUIRefreshData().
 
 
 // Atmospheric Escape
@@ -90,17 +88,14 @@ set throttle to 0.
 lock steering to prograde.
 wait until vang(ship:facing:vector, ship:prograde:vector) < 0.25.
 
-KUIKonsole("LEAVING ATMOSPHERE").
-wait 1.
 until ship:altitude >= body:atm:height
 {
     set kuniverse:timewarp:rate to 4.
-    KUIKonsole("WARPING").
+    KUIKonsole("COASTING").
 }
 
 set kuniverse:timewarp:rate to 1.
-KUIKonsole("TRANSITION").
-KUIRefreshData().
+KUIKonsole("LEAVING ATMOSPHERE").
 wait 3.
 
 
