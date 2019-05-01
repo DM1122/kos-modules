@@ -185,9 +185,9 @@ function ProgradePitch      // surface prograde pitch to horzion
     return proAngle.
 }
 
-function Roll
+function Roll()
 {
-    local rollAngle is 90 - vang(ship:up:vector, ship:facing:starvector).
+    local rollAngle is 90 - vang(ship:up:vector, ship:starvector).
 
     return rollAngle.
 }
